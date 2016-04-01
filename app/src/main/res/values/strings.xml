@@ -18,4 +18,9 @@
     <string name="action_refresh" translatable="false">Refresh</string>
     <string name="hello_world">Hello world!</string>
 
+    <string-array name="sort_options">
+        <item>Most popular</item>
+        <item>Highest rated</item>
+    </string-array>
+
 </resources>
