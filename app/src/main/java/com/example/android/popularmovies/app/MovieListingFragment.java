@@ -15,6 +15,7 @@
  */
 package com.example.android.popularmovies.app;
 
+import android.app.FragmentTransaction;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -27,6 +28,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ListView;
@@ -243,6 +245,17 @@ public class MovieListingFragment extends Fragment {
         // Get a reference to the ListView, and attach this adapter to it.
         GridView gridView = (GridView) rootView.findViewById(R.id.grid_view_forecast);
         gridView.setAdapter(mForecastAdapter);
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                // Log.i("MovieListingFragment", "Item clicked: " + view.toString() + " " + i + " " + l);
+                getActivity().getSupportFragmentManager().beginTransaction()
+                    .addToBackStack(null)
+                    .replace(R.id.container, MovieDetailsFragment.newInstance("",""))
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
+                    .commit();
+            }
+        });
 
         return rootView;
     }
