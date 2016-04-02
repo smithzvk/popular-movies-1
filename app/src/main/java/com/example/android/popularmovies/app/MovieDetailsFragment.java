@@ -3,12 +3,27 @@ package com.example.android.popularmovies.app;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.example.android.popularmovies.app.R;
+import com.squareup.picasso.Picasso;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -57,7 +72,21 @@ public class MovieDetailsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_movie_details, container, false);
+        StrictMode.ThreadPolicy tp = StrictMode.ThreadPolicy.LAX;
+        StrictMode.setThreadPolicy(tp);
+        View view = inflater.inflate(R.layout.fragment_movie_details, container, false);
+        ImageView imageView = (ImageView) view.findViewById(R.id.poster);
+        String[] data = fetchMovieInfo(movieId);
+        ((TextView) view.findViewById(R.id.title)).setText(data[0]);
+        ((TextView) view.findViewById(R.id.date)).setText("("+data[1]+")");
+        ((TextView) view.findViewById(R.id.avg_rating)).setText("Average rating: " + data[2]);
+        ((TextView) view.findViewById(R.id.plot)).setText(data[3]);
+        Picasso.with(getActivity())
+                .load("http://image.tmdb.org/t/p/w500/" + data[4])
+                // .load("https://api.themoviedb.org/3/movie/"+movieId+"/lIv1QinFqz4dlp5U4lQ6HaiskOZ.jpg")
+                .into(imageView);
+        // "http://i.imgur.com/DvpvklR.png"
+        return view;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -98,4 +127,95 @@ public class MovieDetailsFragment extends Fragment {
     //     // TODO: Update argument type and name
     //     void onFragmentInteraction(Uri uri);
     // }
+
+    String LOG_TAG = "MovieDetailsFragment";
+
+
+    private String[] fetchMovieInfo(int movieId)
+    {
+        HttpURLConnection urlConnection = null;
+        BufferedReader reader = null;
+
+        // Will contain the raw JSON response as a string.
+        String forecastJsonStr = null;
+
+        try {
+            // Construct the URL for the Movie DB query
+            final String FORECAST_BASE_URL =
+                "https://api.themoviedb.org/3/movie/";
+
+            Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendPath(String.valueOf(movieId))
+                .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
+                .build();
+
+            URL url = new URL(builtUri.toString());
+
+            Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+
+            // Create the request to OpenWeatherMap, and open the connection
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("GET");
+            urlConnection.connect();
+
+            // Read the input stream into a String
+            InputStream inputStream = urlConnection.getInputStream();
+            StringBuffer buffer = new StringBuffer();
+            if (inputStream == null) {
+                // Nothing to do.
+                return null;
+            }
+            reader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
+                // But it does make debugging a *lot* easier if you print out the completed
+                // buffer for debugging.
+                buffer.append(line + "\n");
+            }
+
+            if (buffer.length() == 0) {
+                // Stream was empty.  No point in parsing.
+                return null;
+            }
+            forecastJsonStr = buffer.toString();
+
+            Log.v(LOG_TAG, "Forecast string: " + forecastJsonStr);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Error ", e);
+            // If the code didn't successfully get the weather data, there's no point in attemping
+            // to parse it.
+            return null;
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (final IOException e) {
+                    Log.e(LOG_TAG, "Error closing stream", e);
+                }
+            }
+        }
+
+        try {
+
+            JSONObject movieInfo = new JSONObject(forecastJsonStr);
+            String title = movieInfo.getString("title");
+            String date = movieInfo.getString("release_date");
+            String avgRating = String.valueOf(movieInfo.getDouble("vote_average"));
+            String plot = movieInfo.getString("overview");
+            String posterUrl = movieInfo.getString("poster_path");
+
+            String[] retData = {title, date, avgRating, plot, posterUrl};
+            return retData;
+
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, e.getMessage(), e);
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }
