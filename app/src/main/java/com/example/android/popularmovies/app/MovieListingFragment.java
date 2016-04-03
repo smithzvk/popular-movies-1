@@ -170,7 +170,7 @@ public class MovieListingFragment extends Fragment {
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
+    public class FetchWeatherTask extends AsyncTask<String, Void, MovieDetails[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
@@ -203,27 +203,32 @@ public class MovieListingFragment extends Fragment {
          * Fortunately parsing is easy:  constructor takes the JSON string and converts it
          * into an Object hierarchy for us.
          */
-        private String[] getWeatherDataFromJson(String forecastJsonStr)
+        private MovieDetails[] getWeatherDataFromJson(String forecastJsonStr)
                 throws JSONException {
 
             JSONObject forecastJson = new JSONObject(forecastJsonStr);
-            JSONArray results = forecastJson.getJSONArray("results");
+            JSONArray resultObj = forecastJson.getJSONArray("results");
 
-            String[] resultStrs = new String[results.length()];
-            for(int i = 0; i < results.length(); i++) {
-
-                JSONObject movie = results.getJSONObject(i);
-                resultStrs[i] = movie.getString("title");
+            MovieDetails[] results = new MovieDetails[resultObj.length()];
+            for(int i = 0; i < resultObj.length(); i++) {
+                JSONObject movie = resultObj.getJSONObject(i);
+                results[i] = new MovieDetails();
+                results[i].id = movie.getString("id");
+                results[i].title = movie.getString("title");
+                results[i].date = movie.getString("release_date");
+                results[i].plot = movie.getString("overview");
+                results[i].avgRating = movie.getString("vote_average");
+                results[i].posterUrl = movie.getString("poster_path");
             }
 
-            for (String s : resultStrs) {
-                Log.v(LOG_TAG, "Forecast entry: " + s);
-            }
-            return resultStrs;
+            // for (String s : resultStrs) {
+            //     Log.v(LOG_TAG, "Forecast entry: " + s);
+            // }
+            return results;
 
         }
         @Override
-        protected String[] doInBackground(String... params) {
+        protected MovieDetails[] doInBackground(String... params) {
 
             // If there's no zip code, there's nothing to look up.  Verify size of params.
             if (params.length == 0) {
@@ -323,11 +328,11 @@ public class MovieListingFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(String[] result) {
+        protected void onPostExecute(MovieDetails[] result) {
             if (result != null) {
                 mForecastAdapter.clear();
-                for(String dayForecastStr : result) {
-                    mForecastAdapter.add(dayForecastStr);
+                for(MovieDetails dayForecastStr : result) {
+                    mForecastAdapter.add(dayForecastStr.title);
                 }
                 // New data is back from the server.  Hooray!
             }
