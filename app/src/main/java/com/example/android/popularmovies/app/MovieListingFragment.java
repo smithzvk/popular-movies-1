@@ -54,7 +54,8 @@ import java.util.List;
  */
 public class MovieListingFragment extends Fragment {
 
-    private ArrayAdapter<String> mForecastAdapter;
+    private MovieArrayAdapter mForecastAdapter;
+    private List<MovieDetails> movies;
 
     public MovieListingFragment() {
     }
@@ -91,38 +92,17 @@ public class MovieListingFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         // Create some dummy data for the ListView.  Here's a sample weekly forecast
-        String[] data = {
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title",
-                "Movie title"};
-        List<String> movieTitles = new ArrayList<String>(Arrays.asList(data));
+        movies = new ArrayList<MovieDetails>();
 
         // Now that we have some dummy forecast data, create an ArrayAdapter.
         // The ArrayAdapter will take data from a source (like our dummy forecast) and
         // use it to populate the ListView it's attached to.
         mForecastAdapter =
-                new ArrayAdapter<String>(
+                new MovieArrayAdapter(
                         getActivity(), // The current context (this activity)
                         R.layout.list_item_forecast, // The name of the layout ID.
                         R.id.list_item_forecast_textview, // The ID of the textview to populate.
-                        movieTitles);
+                        movies);
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
@@ -332,7 +312,7 @@ public class MovieListingFragment extends Fragment {
             if (result != null) {
                 mForecastAdapter.clear();
                 for(MovieDetails dayForecastStr : result) {
-                    mForecastAdapter.add(dayForecastStr.title);
+                    mForecastAdapter.add(dayForecastStr);
                 }
                 // New data is back from the server.  Hooray!
             }
