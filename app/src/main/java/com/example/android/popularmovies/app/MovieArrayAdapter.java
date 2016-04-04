@@ -32,13 +32,13 @@ public class MovieArrayAdapter extends ArrayAdapter<MovieDetails> {
 
         if (v == null) {
             LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            v = inflater.inflate(R.layout.list_item_forecast, null);
+            v = inflater.inflate(R.layout.list_item_listing, null);
         }
 
         MovieDetails details = listings.get(position);
 
         if (details != null) {
-            TextView titleView = (TextView) v.findViewById(R.id.list_item_forecast_textview);
+            TextView titleView = (TextView) v.findViewById(R.id.list_item_listing_textview);
             ImageView posterView = (ImageView) v.findViewById(R.id.list_item_poster);
             if (titleView != null){
                 titleView.setText(details.title);

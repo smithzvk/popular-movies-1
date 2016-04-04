@@ -20,7 +20,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.text.format.Time;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -46,15 +45,14 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
- * Encapsulates fetching the forecast and displaying it as a {@link ListView} layout.
+ * Encapsulates fetching the movie listings and displaying it as a {@link ListView} layout.
  */
 public class MovieListingFragment extends Fragment {
 
-    private MovieArrayAdapter mForecastAdapter;
+    private MovieArrayAdapter movieAdapter;
     private List<MovieDetails> movies;
 
     public MovieListingFragment() {
@@ -69,7 +67,7 @@ public class MovieListingFragment extends Fragment {
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        inflater.inflate(R.menu.forecastfragment, menu);
+        inflater.inflate(R.menu.listingfragment, menu);
     }
 
     @Override
@@ -79,9 +77,9 @@ public class MovieListingFragment extends Fragment {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
+            FetchMovieListingTask movieListingTask = new FetchMovieListingTask();
             Spinner spinner = (Spinner) getActivity().findViewById(R.id.sort_spinner);
-            weatherTask.execute(String.valueOf(spinner.getSelectedItemPosition()));
+            movieListingTask.execute(String.valueOf(spinner.getSelectedItemPosition()));
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -91,17 +89,13 @@ public class MovieListingFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        // Create some dummy data for the ListView.  Here's a sample weekly forecast
         movies = new ArrayList<MovieDetails>();
 
-        // Now that we have some dummy forecast data, create an ArrayAdapter.
-        // The ArrayAdapter will take data from a source (like our dummy forecast) and
-        // use it to populate the ListView it's attached to.
-        mForecastAdapter =
+        movieAdapter =
                 new MovieArrayAdapter(
                         getActivity(), // The current context (this activity)
-                        R.layout.list_item_forecast, // The name of the layout ID.
-                        R.id.list_item_forecast_textview, // The ID of the textview to populate.
+                        R.layout.list_item_listing, // The name of the layout ID.
+                        R.id.list_item_listing_textview, // The ID of the textview to populate.
                         movies);
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
@@ -115,14 +109,14 @@ public class MovieListingFragment extends Fragment {
         // Apply the adapter to the spinner
         spinner.setAdapter(adapter);
 
-        FetchWeatherTask weatherTask = new FetchWeatherTask();
-        weatherTask.execute(String.valueOf(spinner.getSelectedItemPosition()));
+        FetchMovieListingTask movieListingTask = new FetchMovieListingTask();
+        movieListingTask.execute(String.valueOf(spinner.getSelectedItemPosition()));
 
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                FetchWeatherTask weatherTask = new FetchWeatherTask();
-                weatherTask.execute(String.valueOf(i));
+                FetchMovieListingTask movieListingTask = new FetchMovieListingTask();
+                movieListingTask.execute(String.valueOf(i));
             }
 
             @Override
@@ -133,8 +127,8 @@ public class MovieListingFragment extends Fragment {
 
 
         // Get a reference to the ListView, and attach this adapter to it.
-        GridView gridView = (GridView) rootView.findViewById(R.id.grid_view_forecast);
-        gridView.setAdapter(mForecastAdapter);
+        GridView gridView = (GridView) rootView.findViewById(R.id.grid_view_listing);
+        gridView.setAdapter(movieAdapter);
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -150,9 +144,9 @@ public class MovieListingFragment extends Fragment {
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<String, Void, MovieDetails[]> {
+    public class FetchMovieListingTask extends AsyncTask<String, Void, MovieDetails[]> {
 
-        private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
+        private final String LOG_TAG = FetchMovieListingTask.class.getSimpleName();
 
         /* The date/time conversion code is going to be moved outside the asynctask later,
          * so for convenience we're breaking it out into its own method now.
@@ -165,29 +159,14 @@ public class MovieListingFragment extends Fragment {
         }
 
         /**
-         * Prepare the weather high/lows for presentation.
+         * Take the String representing the complete listings in JSON Format and
+         * pull out the data we need to construct the Strings needed.
          */
-        private String formatHighLows(double high, double low) {
-            // For presentation, assume the user doesn't care about tenths of a degree.
-            long roundedHigh = Math.round(high);
-            long roundedLow = Math.round(low);
-
-            String highLowStr = roundedHigh + "/" + roundedLow;
-            return highLowStr;
-        }
-
-        /**
-         * Take the String representing the complete forecast in JSON Format and
-         * pull out the data we need to construct the Strings needed for the wireframes.
-         *
-         * Fortunately parsing is easy:  constructor takes the JSON string and converts it
-         * into an Object hierarchy for us.
-         */
-        private MovieDetails[] getWeatherDataFromJson(String forecastJsonStr)
+        private MovieDetails[] getMovieDataFromJson(String listingsJsonStr)
                 throws JSONException {
 
-            JSONObject forecastJson = new JSONObject(forecastJsonStr);
-            JSONArray resultObj = forecastJson.getJSONArray("results");
+            JSONObject listingsJson = new JSONObject(listingsJsonStr);
+            JSONArray resultObj = listingsJson.getJSONArray("results");
 
             MovieDetails[] results = new MovieDetails[resultObj.length()];
             for(int i = 0; i < resultObj.length(); i++) {
@@ -201,19 +180,11 @@ public class MovieListingFragment extends Fragment {
                 results[i].posterUrl = movie.getString("poster_path");
             }
 
-            // for (String s : resultStrs) {
-            //     Log.v(LOG_TAG, "Forecast entry: " + s);
-            // }
             return results;
 
         }
         @Override
         protected MovieDetails[] doInBackground(String... params) {
-
-            // If there's no zip code, there's nothing to look up.  Verify size of params.
-            if (params.length == 0) {
-                return null;
-            }
 
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
@@ -221,7 +192,12 @@ public class MovieListingFragment extends Fragment {
             BufferedReader reader = null;
 
             // Will contain the raw JSON response as a string.
-            String forecastJsonStr = null;
+            String listingsJsonStr = null;
+
+            // Check to ensure we have a sort option
+            if (params.length != 1) {
+                return null;
+            }
 
             String sortOption;
             switch (params[0])
@@ -238,10 +214,10 @@ public class MovieListingFragment extends Fragment {
             }
 
             try {
-                final String FORECAST_BASE_URL =
+                final String MOVIE_DB_BASE_URL =
                     "https://api.themoviedb.org/3/movie/";
 
-                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendPath(sortOption)
+                Uri builtUri = Uri.parse(MOVIE_DB_BASE_URL).buildUpon().appendPath(sortOption)
                     .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
                     .build();
 
@@ -249,7 +225,7 @@ public class MovieListingFragment extends Fragment {
 
                 Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
-                // Create the request to OpenWeatherMap, and open the connection
+                // Create the request to The Movie DB, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
@@ -275,12 +251,12 @@ public class MovieListingFragment extends Fragment {
                     // Stream was empty.  No point in parsing.
                     return null;
                 }
-                forecastJsonStr = buffer.toString();
+                listingsJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Forecast string: " + forecastJsonStr);
+                Log.v(LOG_TAG, "Movie listings string: " + listingsJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
-                // If the code didn't successfully get the weather data, there's no point in attemping
+                // If the code didn't successfully get the movie data, there's no point in attemping
                 // to parse it.
                 return null;
             } finally {
@@ -297,22 +273,22 @@ public class MovieListingFragment extends Fragment {
             }
 
             try {
-                return getWeatherDataFromJson(forecastJsonStr);
+                return getMovieDataFromJson(listingsJsonStr);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
             }
 
-            // This will only happen if there was an error getting or parsing the forecast.
+            // This will only happen if there was an error getting or parsing the movie listings.
             return null;
         }
 
         @Override
         protected void onPostExecute(MovieDetails[] result) {
             if (result != null) {
-                mForecastAdapter.clear();
-                for(MovieDetails dayForecastStr : result) {
-                    mForecastAdapter.add(dayForecastStr);
+                movieAdapter.clear();
+                for(MovieDetails movieDetails : result) {
+                    movieAdapter.add(movieDetails);
                 }
                 // New data is back from the server.  Hooray!
             }

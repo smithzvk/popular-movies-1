@@ -137,14 +137,14 @@ public class MovieDetailsFragment extends Fragment {
         BufferedReader reader = null;
 
         // Will contain the raw JSON response as a string.
-        String forecastJsonStr = null;
+        String listingsJsonStr = null;
 
         try {
             // Construct the URL for the Movie DB query
-            final String FORECAST_BASE_URL =
+            final String MOVIE_DB_BASE_URL =
                 "https://api.themoviedb.org/3/movie/";
 
-            Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendPath(movieId)
+            Uri builtUri = Uri.parse(MOVIE_DB_BASE_URL).buildUpon().appendPath(movieId)
                 .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
                 .build();
 
@@ -152,7 +152,7 @@ public class MovieDetailsFragment extends Fragment {
 
             Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
-            // Create the request to OpenWeatherMap, and open the connection
+            // Create the request to The Movie DB, and open the connection
             urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setRequestMethod("GET");
             urlConnection.connect();
@@ -178,12 +178,12 @@ public class MovieDetailsFragment extends Fragment {
                 // Stream was empty.  No point in parsing.
                 return null;
             }
-            forecastJsonStr = buffer.toString();
+            listingsJsonStr = buffer.toString();
 
-            Log.v(LOG_TAG, "Forecast string: " + forecastJsonStr);
+            Log.v(LOG_TAG, "Movie listings string: " + listingsJsonStr);
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error ", e);
-            // If the code didn't successfully get the weather data, there's no point in attemping
+            // If the code didn't successfully get the movie data, there's no point in attemping
             // to parse it.
             return null;
         } finally {
@@ -201,7 +201,7 @@ public class MovieDetailsFragment extends Fragment {
 
         try {
 
-            JSONObject movieInfo = new JSONObject(forecastJsonStr);
+            JSONObject movieInfo = new JSONObject(listingsJsonStr);
             String title = movieInfo.getString("title");
             String date = movieInfo.getString("release_date");
             String avgRating = String.valueOf(movieInfo.getDouble("vote_average"));
