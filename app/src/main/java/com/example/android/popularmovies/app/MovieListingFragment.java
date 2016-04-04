@@ -141,7 +141,7 @@ public class MovieListingFragment extends Fragment {
                 // Log.i("MovieListingFragment", "Item clicked: " + view.toString() + " " + i + " " + l);
                 getActivity().getSupportFragmentManager().beginTransaction()
                     .addToBackStack(null)
-                    .replace(R.id.container, MovieDetailsFragment.newInstance(244786))
+                    .replace(R.id.container, MovieDetailsFragment.newInstance(movies.get(i).id))
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
                     .commit();
             }
