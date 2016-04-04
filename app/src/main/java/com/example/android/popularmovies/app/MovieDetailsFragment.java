@@ -36,7 +36,7 @@ import java.net.URL;
 public class MovieDetailsFragment extends Fragment {
     private static final String ARG_MOVIE_ID = "movie_id";
 
-    private int movieId;
+    private String movieId;
 
     // private OnFragmentInteractionListener mListener;
 
@@ -52,10 +52,10 @@ public class MovieDetailsFragment extends Fragment {
      * @return A new instance of fragment MovieDetailsFragment.
      */
     // TODO: Rename and change types and number of parameters
-    public static MovieDetailsFragment newInstance(int movieId) {
+    public static MovieDetailsFragment newInstance(String movieId) {
         MovieDetailsFragment fragment = new MovieDetailsFragment();
         Bundle args = new Bundle();
-        args.putInt(ARG_MOVIE_ID, movieId);
+        args.putString(ARG_MOVIE_ID, movieId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -64,7 +64,7 @@ public class MovieDetailsFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            movieId = getArguments().getInt(ARG_MOVIE_ID);
+            movieId = getArguments().getString(ARG_MOVIE_ID);
         }
     }
 
@@ -131,7 +131,7 @@ public class MovieDetailsFragment extends Fragment {
     String LOG_TAG = "MovieDetailsFragment";
 
 
-    private String[] fetchMovieInfo(int movieId)
+    private String[] fetchMovieInfo(String movieId)
     {
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
@@ -144,7 +144,7 @@ public class MovieDetailsFragment extends Fragment {
             final String FORECAST_BASE_URL =
                 "https://api.themoviedb.org/3/movie/";
 
-            Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendPath(String.valueOf(movieId))
+            Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendPath(movieId)
                 .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
                 .build();
 
