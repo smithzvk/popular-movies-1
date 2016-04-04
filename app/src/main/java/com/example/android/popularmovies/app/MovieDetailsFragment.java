@@ -2,6 +2,7 @@ package com.example.android.popularmovies.app;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.support.v4.app.Fragment;
@@ -24,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -37,8 +39,7 @@ public class MovieDetailsFragment extends Fragment {
     private static final String ARG_MOVIE_ID = "movie_id";
 
     private String movieId;
-
-    // private OnFragmentInteractionListener mListener;
+    private MovieDetails details;
 
     public MovieDetailsFragment() {
         // Required empty public constructor
@@ -72,18 +73,9 @@ public class MovieDetailsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        StrictMode.ThreadPolicy tp = StrictMode.ThreadPolicy.LAX;
-        StrictMode.setThreadPolicy(tp);
         View view = inflater.inflate(R.layout.fragment_movie_details, container, false);
-        ImageView imageView = (ImageView) view.findViewById(R.id.poster);
-        MovieDetails data = fetchMovieInfo(movieId);
-        ((TextView) view.findViewById(R.id.title)).setText(data.title);
-        ((TextView) view.findViewById(R.id.date)).setText("("+data.date+")");
-        ((TextView) view.findViewById(R.id.avg_rating)).setText("Average rating: " + data.avgRating);
-        ((TextView) view.findViewById(R.id.plot)).setText(data.plot);
-        Picasso.with(getActivity())
-                .load("http://image.tmdb.org/t/p/w500/" + data.posterUrl)
-                .into(imageView);
+        FetchMovieDetailsTask movieListingTask = new FetchMovieDetailsTask();
+        movieListingTask.execute(movieId);
         return view;
     }
 
@@ -126,94 +118,138 @@ public class MovieDetailsFragment extends Fragment {
     //     void onFragmentInteraction(Uri uri);
     // }
 
-    String LOG_TAG = "MovieDetailsFragment";
+    public class FetchMovieDetailsTask extends AsyncTask<String, Void, MovieDetails> {
+
+        private final String LOG_TAG = FetchMovieDetailsTask.class.getSimpleName();
+
+        /* The date/time conversion code is going to be moved outside the asynctask later,
+         * so for convenience we're breaking it out into its own method now.
+         */
+        private String getReadableDateString(long time){
+            // Because the API returns a unix timestamp (measured in seconds),
+            // it must be converted to milliseconds in order to be converted to valid date.
+            SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd");
+            return shortenedDateFormat.format(time);
+        }
+
+        /**
+         * Take the String representing the complete listings in JSON Format and
+         * pull out the data we need to construct the Strings needed.
+         */
+        // private MovieDetails[] getMovieDataFromJson(String listingsJsonStr)
+        //         throws JSONException {
 
 
-    private MovieDetails fetchMovieInfo(String movieId)
-    {
-        HttpURLConnection urlConnection = null;
-        BufferedReader reader = null;
+        // }
+        @Override
+        protected MovieDetails doInBackground(String... params) {
 
-        // Will contain the raw JSON response as a string.
-        String listingsJsonStr = null;
-
-        try {
-            // Construct the URL for the Movie DB query
-            final String MOVIE_DB_BASE_URL =
-                "https://api.themoviedb.org/3/movie/";
-
-            Uri builtUri = Uri.parse(MOVIE_DB_BASE_URL).buildUpon().appendPath(movieId)
-                .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
-                .build();
-
-            URL url = new URL(builtUri.toString());
-
-            Log.v(LOG_TAG, "Built URI " + builtUri.toString());
-
-            // Create the request to The Movie DB, and open the connection
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestMethod("GET");
-            urlConnection.connect();
-
-            // Read the input stream into a String
-            InputStream inputStream = urlConnection.getInputStream();
-            StringBuffer buffer = new StringBuffer();
-            if (inputStream == null) {
-                // Nothing to do.
+            // Check to ensure we have a movie id
+            if (params.length != 1) {
                 return null;
             }
-            reader = new BufferedReader(new InputStreamReader(inputStream));
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                // But it does make debugging a *lot* easier if you print out the completed
-                // buffer for debugging.
-                buffer.append(line + "\n");
-            }
+            String movieId = params[0];
 
-            if (buffer.length() == 0) {
-                // Stream was empty.  No point in parsing.
+            HttpURLConnection urlConnection = null;
+            BufferedReader reader = null;
+
+            // Will contain the raw JSON response as a string.
+            String listingsJsonStr = null;
+
+            try {
+                // Construct the URL for the Movie DB query
+                final String MOVIE_DB_BASE_URL =
+                    "https://api.themoviedb.org/3/movie/";
+
+                Uri builtUri = Uri.parse(MOVIE_DB_BASE_URL).buildUpon().appendPath(movieId)
+                    .appendQueryParameter("api_key", getString(R.string.THE_MOVIE_DB_API_TOKEN))
+                    .build();
+
+                URL url = new URL(builtUri.toString());
+
+                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+
+                // Create the request to The Movie DB, and open the connection
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                // Read the input stream into a String
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
+                    // Nothing to do.
+                    return null;
+                }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
+                    // But it does make debugging a *lot* easier if you print out the completed
+                    // buffer for debugging.
+                    buffer.append(line + "\n");
+                }
+
+                if (buffer.length() == 0) {
+                    // Stream was empty.  No point in parsing.
+                    return null;
+                }
+                listingsJsonStr = buffer.toString();
+
+                Log.v(LOG_TAG, "Movie listings string: " + listingsJsonStr);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Error ", e);
+                // If the code didn't successfully get the movie data, there's no point in attemping
+                // to parse it.
                 return null;
-            }
-            listingsJsonStr = buffer.toString();
-
-            Log.v(LOG_TAG, "Movie listings string: " + listingsJsonStr);
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Error ", e);
-            // If the code didn't successfully get the movie data, there's no point in attemping
-            // to parse it.
-            return null;
-        } finally {
-            if (urlConnection != null) {
-                urlConnection.disconnect();
-            }
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (final IOException e) {
-                    Log.e(LOG_TAG, "Error closing stream", e);
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
                 }
             }
+
+            try {
+
+                JSONObject movieInfo = new JSONObject(listingsJsonStr);
+                MovieDetails details
+                    = new MovieDetails(movieInfo.getString("id"),
+                                       movieInfo.getString("title"),
+                                       movieInfo.getString("release_date"),
+                                       String.valueOf(movieInfo.getDouble("vote_average")),
+                                       movieInfo.getString("overview"),
+                                       movieInfo.getString("poster_path"));
+                return details;
+
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
+
+            return null;
         }
 
-        try {
-
-            JSONObject movieInfo = new JSONObject(listingsJsonStr);
-            MovieDetails details
-                = new MovieDetails(movieInfo.getString("id"),
-                                   movieInfo.getString("title"),
-                                   movieInfo.getString("release_date"),
-                                   String.valueOf(movieInfo.getDouble("vote_average")),
-                                   movieInfo.getString("overview"),
-                                   movieInfo.getString("poster_path"));
-            return details;
-
-        } catch (JSONException e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
-            e.printStackTrace();
+        @Override
+        protected void onPostExecute(MovieDetails result) {
+            View view = getView();
+            if (result != null) {
+                ((TextView) view.findViewById(R.id.title)).setText(result.title);
+                ((TextView) view.findViewById(R.id.date)).setText("("+result.date+")");
+                ((TextView) view.findViewById(R.id.avg_rating)).setText("Average rating: " + result.avgRating);
+                ((TextView) view.findViewById(R.id.plot)).setText(result.plot);
+                ImageView imageView = (ImageView) view.findViewById(R.id.poster);
+                Picasso.with(getActivity())
+                    .load("http://image.tmdb.org/t/p/w500/" + result.posterUrl)
+                    .into(imageView);
+            }
         }
-
-        return null;
     }
 }
