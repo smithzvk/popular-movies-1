@@ -76,16 +76,14 @@ public class MovieDetailsFragment extends Fragment {
         StrictMode.setThreadPolicy(tp);
         View view = inflater.inflate(R.layout.fragment_movie_details, container, false);
         ImageView imageView = (ImageView) view.findViewById(R.id.poster);
-        String[] data = fetchMovieInfo(movieId);
-        ((TextView) view.findViewById(R.id.title)).setText(data[0]);
-        ((TextView) view.findViewById(R.id.date)).setText("("+data[1]+")");
-        ((TextView) view.findViewById(R.id.avg_rating)).setText("Average rating: " + data[2]);
-        ((TextView) view.findViewById(R.id.plot)).setText(data[3]);
+        MovieDetails data = fetchMovieInfo(movieId);
+        ((TextView) view.findViewById(R.id.title)).setText(data.title);
+        ((TextView) view.findViewById(R.id.date)).setText("("+data.date+")");
+        ((TextView) view.findViewById(R.id.avg_rating)).setText("Average rating: " + data.avgRating);
+        ((TextView) view.findViewById(R.id.plot)).setText(data.plot);
         Picasso.with(getActivity())
-                .load("http://image.tmdb.org/t/p/w500/" + data[4])
-                // .load("https://api.themoviedb.org/3/movie/"+movieId+"/lIv1QinFqz4dlp5U4lQ6HaiskOZ.jpg")
+                .load("http://image.tmdb.org/t/p/w500/" + data.posterUrl)
                 .into(imageView);
-        // "http://i.imgur.com/DvpvklR.png"
         return view;
     }
 
@@ -131,7 +129,7 @@ public class MovieDetailsFragment extends Fragment {
     String LOG_TAG = "MovieDetailsFragment";
 
 
-    private String[] fetchMovieInfo(String movieId)
+    private MovieDetails fetchMovieInfo(String movieId)
     {
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
@@ -202,14 +200,14 @@ public class MovieDetailsFragment extends Fragment {
         try {
 
             JSONObject movieInfo = new JSONObject(listingsJsonStr);
-            String title = movieInfo.getString("title");
-            String date = movieInfo.getString("release_date");
-            String avgRating = String.valueOf(movieInfo.getDouble("vote_average"));
-            String plot = movieInfo.getString("overview");
-            String posterUrl = movieInfo.getString("poster_path");
-
-            String[] retData = {title, date, avgRating, plot, posterUrl};
-            return retData;
+            MovieDetails details
+                = new MovieDetails(movieInfo.getString("id"),
+                                   movieInfo.getString("title"),
+                                   movieInfo.getString("release_date"),
+                                   String.valueOf(movieInfo.getDouble("vote_average")),
+                                   movieInfo.getString("overview"),
+                                   movieInfo.getString("poster_path"));
+            return details;
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage(), e);
