@@ -46,7 +46,7 @@ public class MovieArrayAdapter extends ArrayAdapter<MovieDetails> {
             if (posterView != null)
             {
                 Picasso.with(parent.getContext())
-                        .load("http://image.tmdb.org/t/p/w500/" + details.posterUrl)
+                        .load("http://image.tmdb.org/t/p/w185/" + details.posterUrl)
                         .into(posterView);
             }
         }
